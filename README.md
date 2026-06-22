@@ -40,147 +40,59 @@ Program:
 #include <string.h>
 #include <ctype.h>
 
-char keyMatrix[5][5];
+char m[5][5];
 
-// Function to check if character is already in key matrix
-int isPresent(char ch, char keyMatrix[5][5], int size) {
-    for(int i = 0; i < size; i++) {
-        if(keyMatrix[i/5][i%5] == ch)
-            return 1;
-    }
+int p(char c, int k) {
+    for(int i = 0; i < k; i++) if(m[i/5][i%5] == c) return 1;
     return 0;
 }
 
-// Function to generate key matrix
-void generateKeyMatrix(char key[]) {
-    int i, j, k = 0;
-    char temp[25];
-
-    // Remove duplicates
-    for(i = 0; key[i] != '\0'; i++) {
-        char ch = toupper(key[i]);
-        if(ch == 'J') ch = 'I';
-
-        if(!isPresent(ch, keyMatrix, k) && isalpha(ch)) {
-            temp[k++] = ch;
-        }
+void gk(char *k) {
+    char t[26]; int n = 0;
+    for(int i = 0; k[i]; i++) {
+        char c = toupper(k[i]) == 'J' ? 'I' : toupper(k[i]);
+        if(isalpha(c) && !p(c, n)) t[n++] = c;
     }
-
-    // Fill remaining letters
-    for(char ch = 'A'; ch <= 'Z'; ch++) {
-        if(ch == 'J') continue;
-
-        if(!isPresent(ch, keyMatrix, k)) {
-            temp[k++] = ch;
-        }
+    for(char c = 'A'; c <= 'Z'; c++) {
+        if(c == 'J') continue;
+        if(!p(c, n)) t[n++] = c;
     }
-
-    // Fill 5x5 matrix
-    k = 0;
-    for(i = 0; i < 5; i++) {
-        for(j = 0; j < 5; j++) {
-            keyMatrix[i][j] = temp[k++];
-        }
-    }
+    for(int i = 0; i < 25; i++) m[i/5][i%5] = t[i];
 }
 
-// Function to find position of character
-void findPosition(char ch, int *row, int *col) {
-    if(ch == 'J') ch = 'I';
-
-    for(int i = 0; i < 5; i++) {
-        for(int j = 0; j < 5; j++) {
-            if(keyMatrix[i][j] == ch) {
-                *row = i;
-                *col = j;
-                return;
-            }
-        }
-    }
+void fp(char c, int *r, int *col) {
+    c = (c == 'J') ? 'I' : c;
+    for(int i = 0; i < 5; i++) for(int j = 0; j < 5; j++) if(m[i][j] == c) { *r = i; *col = j; }
 }
 
-// Function to prepare plaintext
-void prepareText(char input[], char output[]) {
-    int i, j = 0;
-
-    for(i = 0; input[i] != '\0'; i++) {
-        if(isalpha(input[i])) {
-            output[j++] = toupper(input[i]);
-        }
+void pt(char *in, char *out) {
+    char t[100]; int j = 0, k = 0;
+    for(int i = 0; in[i]; i++) if(isalpha(in[i])) t[j++] = toupper(in[i]);
+    char f[100];
+    for(int i = 0; i < j; i++) {
+        f[k++] = t[i];
+        if(t[i] == t[i+1]) f[k++] = 'X';
     }
-    output[j] = '\0';
-
-    // Insert X for repeated letters
-    char temp[100];
-    int k = 0;
-
-    for(i = 0; i < j; i++) {
-        temp[k++] = output[i];
-
-        if(output[i] == output[i+1]) {
-            temp[k++] = 'X';
-        }
-    }
-
-    if(k % 2 != 0) {
-        temp[k++] = 'X';
-    }
-
-    temp[k] = '\0';
-    strcpy(output, temp);
+    if(k % 2) f[k++] = 'X';
+    f[k] = 0; strcpy(out, f);
 }
 
-// Encryption function
-void encrypt(char text[]) {
-    int i, r1, c1, r2, c2;
-
-    for(i = 0; text[i] != '\0'; i += 2) {
-        findPosition(text[i], &r1, &c1);
-        findPosition(text[i+1], &r2, &c2);
-
-        // Same row
-        if(r1 == r2) {
-            text[i]     = keyMatrix[r1][(c1 + 1) % 5];
-            text[i + 1] = keyMatrix[r2][(c2 + 1) % 5];
-        }
-        // Same column
-        else if(c1 == c2) {
-            text[i]     = keyMatrix[(r1 + 1) % 5][c1];
-            text[i + 1] = keyMatrix[(r2 + 1) % 5][c2];
-        }
-        // Rectangle
-        else {
-            text[i]     = keyMatrix[r1][c2];
-            text[i + 1] = keyMatrix[r2][c1];
-        }
+void enc(char *t) {
+    for(int i = 0; t[i]; i += 2) {
+        int r1, c1, r2, c2;
+        fp(t[i], &r1, &c1); fp(t[i+1], &r2, &c2);
+        if(r1 == r2) { t[i] = m[r1][(c1+1)%5]; t[i+1] = m[r2][(c2+1)%5]; }
+        else if(c1 == c2) { t[i] = m[(r1+1)%5][c1]; t[i+1] = m[(r2+1)%5][c2]; }
+        else { t[i] = m[r1][c2]; t[i+1] = m[r2][c1]; }
     }
 }
 
 int main() {
-    char key[50], plaintext[100], preparedText[100];
-
-    printf("Enter the keyword: ");
-    scanf("%s", key);
-
-    printf("Enter the plaintext: ");
-    scanf("%s", plaintext);
-
-    generateKeyMatrix(key);
-
-    printf("\nKey Matrix:\n");
-    for(int i = 0; i < 5; i++) {
-        for(int j = 0; j < 5; j++) {
-            printf("%c ", keyMatrix[i][j]);
-        }
-        printf("\n");
-    }
-
-    prepareText(plaintext, preparedText);
-
-    encrypt(preparedText);
-
-    printf("\nCipher Text: %s\n", preparedText);
-
+    char k[50], pt_text[100], out[100];
+    printf("Keyword: "); scanf("%s", k);
+    printf("Plaintext: "); scanf("%s", pt_text);
+    gk(k); pt(pt_text, out); enc(out);
+    printf("Cipher: %s\n", out);
     return 0;
 }
 
